@@ -19,12 +19,26 @@ from .prompts import (
 )
 
 
+_VECTOR_KEYS = [
+    "social_intensity", "physical_intensity", "cultural_appetite", "culinary_focus",
+    "tempo", "structure", "nature_vs_urban", "budget", "novelty_seeking",
+]
+
+
+def _normalise_vector(v: dict | list) -> dict:
+    """Convert a list of values to a named vector dict if the model returned a list."""
+    if isinstance(v, list):
+        return dict(zip(_VECTOR_KEYS, v))
+    return v
+
+
 def _llm(system: str, user: str) -> str:
     response = litellm.completion(
         model=MODEL_NAME,
         api_base=OPENROUTER_BASE_URL,
         api_key=OPENROUTER_API_KEY,
         max_tokens=MAX_TOKENS,
+        ssl_verify=False,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -50,6 +64,8 @@ def generate_destinations(
     )
     raw = _llm(DESTINATION_GENERATION_PROMPT, user_msg)
     data = json.loads(raw)
+    for dest in data:
+        dest["vector"] = _normalise_vector(dest["vector"])
     return data
 
 
